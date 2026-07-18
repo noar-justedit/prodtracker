@@ -1,0 +1,29 @@
+{
+  "name": "prodtracker",
+  "productName": "prodtracker",
+  "version": "0.4.4",
+  "description": "Working-time tracker for post-production. Per-project START/STOP timer, work-day totals, auto-pause on inactivity.",
+  "main": "src/main/main.js",
+  "author": "Just Edit",
+  "license": "GPL-3.0-or-later",
+  "private": true,
+  "homepage": "https://github.com/noar-justedit/prodtracker",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/noar-justedit/prodtracker.git"
+  },
+  "bugs": {
+    "url": "https://github.com/noar-justedit/prodtracker/issues"
+  },
+  "scripts": {
+    "start": "electron .",
+    "dev": "electron . --dev",
+    "build": "electron-builder --config electron-builder.yml --mac --arm64",
+    "build:win": "electron-builder --config electron-builder.yml --win --x64",
+    "build:all": "electron-builder --config electron-builder.yml --mac --arm64 && electron-builder --config electron-builder.yml --win --x64"
+  },
+  "devDependencies": {
+    "electron": "^28.0.0",
+    "electron-builder": "^24.9.1"
+  }
+}

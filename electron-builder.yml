@@ -1,0 +1,64 @@
+appId: fr.just-edit.prodtracker
+productName: prodtracker
+copyright: "Copyright © 2026 Just Edit"
+compression: maximum
+asar: true
+
+directories:
+  buildResources: build-resources
+
+files:
+  - src/**/*
+  - package.json
+  - LICENSE
+  - build-resources/*.ico
+  - build-resources/*.icns
+  - build-resources/*.png
+
+mac:
+  category: public.app-category.productivity
+  icon: build-resources/icon.png
+  target:
+    - target: dmg
+      arch:
+        - arm64
+
+dmg:
+  title: "prodtracker"
+  writeUpdateInfo: false
+  icon: null
+  # electron-builder auto-detects build-resources/license_en.txt (and license_<lang>.txt
+  # variants) as the DMG license agreement by filename convention. There is no "license"
+  # key under dmg in this version's schema - do not add one, it fails validation.
+  window:
+    width: 540
+    height: 400
+  contents:
+    - x: 150
+      y: 190
+      type: file
+    - x: 390
+      y: 190
+      type: link
+      path: /Applications
+
+win:
+  icon: build-resources/icon.ico
+  requestedExecutionLevel: asInvoker
+  target:
+    - target: nsis
+      arch:
+        - x64
+
+nsis:
+  oneClick: false
+  perMachine: false
+  allowElevation: false
+  allowToChangeInstallationDirectory: true
+  license: build-resources/license_en.txt
+  installerLanguages:
+    - fr_FR
+    - en_US
+  createDesktopShortcut: true
+  createStartMenuShortcut: true
+  shortcutName: prodtracker

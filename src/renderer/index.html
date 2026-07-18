@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>prod tracker</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <div id="app">
+    <div class="rec-frame"></div>
+    <header id="titlebar">
+      <div class="t-logo"><span class="t-name">prod tracker</span><span>.</span></div>
+      <div class="t-ver">v0.4.4</div>
+      <div class="t-spacer"></div>
+      <div class="ap-wrap wd-wrap">
+        <button id="wdToggle" class="fbtn" title="Working day length (used for work-day totals)"><span class="ap-dot wd-dot"></span> <span id="wdLabel">WORKDAY 8H</span></button>
+        <div id="wdPop" class="ap-pop">
+          <div class="ap-pop-row"><span class="ap-pop-title">Work day</span></div>
+          <div class="ap-pop-sub">Length of one working day. Totals roll up into work-days (Jd) on this basis, not 24h.</div>
+          <div class="ap-seg" id="wdSeg">
+            <button data-h="8">8h</button>
+            <button data-h="10">10h</button>
+            <button data-h="custom">Custom</button>
+          </div>
+          <div id="wdCustomWrap" class="wd-custom">
+            <input id="wdCustom" class="field wd-input" type="text" autocomplete="off" placeholder="e.g. 7.5 or 7:30" />
+            <button id="wdApply" class="btn btn-green wd-apply">Set</button>
+          </div>
+        </div>
+      </div>
+      <div class="ap-wrap">
+        <button id="autoToggle" class="fbtn" title="Auto-pause on inactivity / sleep"><span class="ap-dot"></span> <span id="apLabel">AUTO-PAUSE 5 MIN</span></button>
+        <div id="apPop" class="ap-pop">
+          <div class="ap-pop-row">
+            <span class="ap-pop-title">Auto-pause</span>
+            <button id="apSwitch" class="switch" role="switch"><span class="knob"></span></button>
+          </div>
+          <div class="ap-pop-sub">Pauses the timer after inactivity or sleep, resumes when you're back.</div>
+          <div class="ap-seg" id="apSeg">
+            <button data-min="1">1</button>
+            <button data-min="2">2</button>
+            <button data-min="5">5</button>
+            <button data-min="10">10</button>
+            <button data-min="15">15</button>
+            <button data-min="30">30</button>
+          </div>
+          <div class="ap-seg-unit">minutes</div>
+        </div>
+      </div>
+    </header>
+
+    <div id="main">
+      <aside class="panel panel-left">
+        <div class="panel-hd">
+          <span class="hd-dot dst"></span>
+          <h2 class="dst-h">Productions</h2>
+          <div class="t-spacer"></div>
+          <button id="btnNew" class="mini-btn" title="New production">+</button>
+        </div>
+        <div id="prodList" class="panel-scroll"></div>
+      </aside>
+      <main id="content" class="panel"></main>
+    </div>
+  </div>
+
+  <!-- Context menu (right-click on a prod) -->
+  <div id="ctxMenu" class="ctx-menu"></div>
+
+  <!-- New production modal -->
+  <div id="modalNew" class="overlay">
+    <div class="modal">
+      <div class="modal-title">New production</div>
+      <label class="field-label">Production name</label>
+      <input id="inNewName" class="field" type="text" autocomplete="off" placeholder="e.g. Summer Clip 2026" />
+      <label class="field-label">Client</label>
+      <input id="inNewClient" class="field" type="text" autocomplete="off" placeholder="e.g. Studio North" />
+      <div class="modal-actions">
+        <button id="btnCancelNew" class="btn btn-ghost">Cancel</button>
+        <button id="btnCreate" class="btn btn-green">Create</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Stats overlay -->
+  <div id="modalStats" class="overlay">
+    <div class="modal modal-wide">
+      <div class="modal-head">
+        <div id="statsTitle" class="modal-title">Statistics</div>
+        <div class="t-spacer"></div>
+        <button id="btnCloseStats" class="mini-btn">×</button>
+      </div>
+      <div id="statsBody" class="stats-body"></div>
+    </div>
+  </div>
+
+  <!-- Finish confirm -->
+  <div id="modalDone" class="overlay">
+    <div class="modal">
+      <div class="modal-title">Finish this production?</div>
+      <div id="doneMsg" class="modal-msg"></div>
+      <div class="modal-actions">
+        <button id="btnCancelDone" class="btn btn-ghost">Cancel</button>
+        <button id="btnConfirmDone" class="btn btn-red">Finish</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Delete confirm -->
+  <div id="modalDelete" class="overlay">
+    <div class="modal">
+      <div class="modal-title">Delete this production?</div>
+      <div id="delMsg" class="modal-msg"></div>
+      <div class="del-warn" id="delWarn"></div>
+      <div class="modal-actions">
+        <button id="btnCancelDelete" class="btn btn-ghost">Cancel</button>
+        <button id="btnConfirmDelete" class="btn btn-red">Delete permanently</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
