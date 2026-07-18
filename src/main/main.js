@@ -9,12 +9,16 @@ const https = require("https");
 
 const DATA_FILE = path.join(app.getPath("userData"), "prodtracker-data.json");
 
-/* ---------------- Update check (GitHub Releases) ---------------- */
-// The app queries the Releases API for GITHUB_REPO, compares the latest tag with
-// its own version, and links to the release page if newer. Never blocks startup;
-// fails silently on any network issue. If you fork, set this to your own repo
-// ("owner/name"), or leave it empty to disable update checks.
+/* ---------------- Update check (version.json, INGESTO-style) ---------------- */
+// Same mechanism as the other Just Edit apps (INGESTO, etc.): a small JSON file
+// hosted on the repo, keyed per app. Never blocks startup; fails silently on any
+// network issue. If you fork, point GITHUB_REPO at your own repo, or leave it
+// empty to disable update checks.
 const GITHUB_REPO = "noar-justedit/prodtracker";
+const UPDATE_BRANCH = "main";
+const UPDATE_URL = GITHUB_REPO
+  ? `https://raw.githubusercontent.com/${GITHUB_REPO}/${UPDATE_BRANCH}/version.json`
+  : "";
 
 function semverGt(a, b) {
   const pa = String(a).split(".").map((n) => parseInt(n, 10) || 0);
@@ -29,7 +33,7 @@ function semverGt(a, b) {
 function fetchFollow(url, hops, cb) {
   if (hops > 3) return cb(null);
   try {
-    const opts = { timeout: 4000, headers: { "User-Agent": "prodtracker", "Accept": "application/vnd.github+json" } };
+    const opts = { timeout: 4000, headers: { "User-Agent": "prodtracker" } };
     const req = https.get(url, opts, (res) => {
       if ([301, 302, 303, 307, 308].includes(res.statusCode) && res.headers.location) {
         res.resume();
@@ -47,18 +51,16 @@ function fetchFollow(url, hops, cb) {
   } catch (e) { cb(null); }
 }
 function checkForUpdate() {
-  if (!GITHUB_REPO) return;
-  const url = `https://api.github.com/repos/${GITHUB_REPO}/releases/latest`;
-  fetchFollow(url, 0, (body) => {
+  if (!UPDATE_URL) return;
+  fetchFollow(UPDATE_URL, 0, (body) => {
     if (!body) return;
     let data; try { data = JSON.parse(body); } catch (e) { return; }
-    const tag = data && data.tag_name;
-    if (!tag) return;
-    const latest = String(tag).replace(/^v/i, "");
-    if (semverGt(latest, app.getVersion()) && mainWin && !mainWin.isDestroyed()) {
+    const info = data && data.prodtracker;
+    if (!info || !info.version) return;
+    if (semverGt(info.version, app.getVersion()) && mainWin && !mainWin.isDestroyed()) {
       mainWin.webContents.send("update-available", {
-        version: latest,
-        url: data.html_url || `https://github.com/${GITHUB_REPO}/releases`
+        version: info.version,
+        url: info.url || `https://github.com/${GITHUB_REPO}/releases`
       });
     }
   });

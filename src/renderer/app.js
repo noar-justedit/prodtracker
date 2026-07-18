@@ -4,7 +4,7 @@
 
 "use strict";
 
-const APP_VERSION = "0.4.4";
+const APP_VERSION = "0.4.5";
 const IDLE_DEFAULT = 300;
 const IDLE_OPTIONS = [60, 120, 300, 600, 900, 1800]; // 1/2/5/10/15/30 min
 const WORKDAY_DEFAULT = 28800; // 8h

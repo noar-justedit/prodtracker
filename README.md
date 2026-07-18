@@ -1,4 +1,4 @@
-# prodtracker v0.4.4
+# prodtracker v0.4.5
 
 A minimalist working-time tracker for post-production. Per-project START/STOP
 timer, totals that roll up into **work-days** (not 24h), and auto-pause on
@@ -49,18 +49,33 @@ and the macOS `.dmg` carries the license as an agreement shown when it is opened
 
 ## Update checks
 
-Configured in `src/main/main.js`:
+Same mechanism as the other Just Edit apps (INGESTO, etc.): a `version.json` file
+at the root of this repo, read on launch from:
 
-```js
-const GITHUB_REPO = "noar-justedit/prodtracker";
+```
+https://raw.githubusercontent.com/noar-justedit/prodtracker/main/version.json
 ```
 
-On launch the app queries the GitHub Releases API for that repo, compares the
-latest release tag (`vX.Y.Z`) with its own version, and offers a link to the
-release page if a newer one exists. It never blocks startup and fails silently
-with no network. Publish updates as GitHub Releases tagged `v0.4.5`, `v0.5.0`,
-etc. If you fork, change `GITHUB_REPO` to your own repo, or leave it empty to
-disable the check entirely.
+```json
+{
+  "prodtracker": { "version": "0.4.5", "url": "https://github.com/noar-justedit/prodtracker/releases" }
+}
+```
+
+The app compares `prodtracker.version` in that file with its own version. If the
+file announces something newer, it shows a notice linking to `url` (the repo's
+Releases page). It never blocks startup and fails silently with no network.
+
+**To publish an update:** bump the version in `version.json` on the `main` branch
+to match your new release, and publish a matching GitHub Release (tag `v0.4.6`,
+`v0.5.0`, etc., with the built `.dmg`/`.exe` attached). Installs on the previous
+version will pick up the notice on their next launch. Keep `version.json` in sync
+with what you've actually released - bumping it ahead of a real release will
+notify users of an update that isn't there yet.
+
+If you fork, change `GITHUB_REPO` and `UPDATE_BRANCH` in `src/main/main.js` to
+your own repo, and update your own `version.json` accordingly - or leave
+`GITHUB_REPO` empty to disable the check entirely.
 
 ## Data location
 
