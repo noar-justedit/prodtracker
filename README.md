@@ -1,10 +1,12 @@
-# prodtracker v0.4.5
+# prodtracker v0.4.6
 
 A minimalist working-time tracker for post-production. Per-project START/STOP
 timer, totals that roll up into **work-days** (not 24h), and auto-pause on
 inactivity or sleep. Built with Electron, runs on macOS and Windows.
 
 Interface language is English; the on-screen wordmark reads "prod tracker".
+
+![prod tracker screenshot](docs/screenshot.png)
 
 ## Features
 
@@ -67,7 +69,7 @@ file announces something newer, it shows a notice linking to `url` (the repo's
 Releases page). It never blocks startup and fails silently with no network.
 
 **To publish an update:** bump the version in `version.json` on the `main` branch
-to match your new release, and publish a matching GitHub Release (tag `v0.4.6`,
+to match your new release, and publish a matching GitHub Release (tag `v0.4.7`,
 `v0.5.0`, etc., with the built `.dmg`/`.exe` attached). Installs on the previous
 version will pick up the notice on their next launch. Keep `version.json` in sync
 with what you've actually released - bumping it ahead of a real release will
