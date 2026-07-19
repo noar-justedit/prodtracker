@@ -4,7 +4,7 @@
 
 "use strict";
 
-const APP_VERSION = "0.4.6";
+const APP_VERSION = "0.4.7";
 const IDLE_DEFAULT = 300;
 const IDLE_OPTIONS = [60, 120, 300, 600, 900, 1800]; // 1/2/5/10/15/30 min
 const WORKDAY_DEFAULT = 28800; // 8h
@@ -20,6 +20,10 @@ const $ = (id) => document.getElementById(id);
 
 /* ---------------- Persistence ---------------- */
 async function boot() {
+  if (window.api.platform === "win32") document.body.classList.add("platform-win");
+  $("footerVer").textContent = "v" + APP_VERSION;
+  $("aboutVer").textContent = "v" + APP_VERSION;
+
   state = await window.api.load();
   if (!state || !Array.isArray(state.productions)) state = { productions: [] };
   if (!state.settings) state.settings = {};
@@ -218,6 +222,15 @@ function applyCustomWorkday() {
 }
 $("wdApply").addEventListener("click", applyCustomWorkday);
 $("wdCustom").addEventListener("keydown", (e) => { if (e.key === "Enter") applyCustomWorkday(); });
+
+/* ---------------- Footer bar: GitHub + About ---------------- */
+const REPO_URL = "https://github.com/noar-justedit/prodtracker";
+$("btnGithub").addEventListener("click", () => window.api.openExternal(REPO_URL));
+$("btnAbout").addEventListener("click", () => $("modalAbout").classList.add("open"));
+$("btnCloseAbout").addEventListener("click", () => $("modalAbout").classList.remove("open"));
+$("btnLicenseGnu").addEventListener("click", () => window.api.openExternal("https://www.gnu.org/licenses/gpl-3.0.html"));
+$("btnLicenseRepo").addEventListener("click", () => window.api.openExternal(REPO_URL + "/blob/main/LICENSE"));
+$("btnAboutGithub").addEventListener("click", () => window.api.openExternal(REPO_URL));
 
 /* ---------------- Context menu ---------------- */
 function openCtxMenu(p, x, y) {
@@ -450,12 +463,12 @@ function cell(k, v) { return `<div class="stats-cell"><div class="k">${k}</div><
 function dayLabel(date, i) { if (i === 0) return "Today"; if (i === 1) return "Yesterday"; const n = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"]; return `${n[date.getDay()]} ${pad(date.getDate())}/${pad(date.getMonth() + 1)}`; }
 $("btnCloseStats").addEventListener("click", () => $("modalStats").classList.remove("open"));
 
-for (const ov of ["modalNew", "modalStats", "modalDone", "modalDelete"]) {
+for (const ov of ["modalNew", "modalStats", "modalDone", "modalDelete", "modalAbout"]) {
   $(ov).addEventListener("click", (e) => { if (e.target.id === ov) $(ov).classList.remove("open"); });
 }
 document.addEventListener("keydown", (e) => {
   if (e.key === "Escape") {
-    ["modalNew", "modalStats", "modalDone", "modalDelete"].forEach((m) => $(m).classList.remove("open"));
+    ["modalNew", "modalStats", "modalDone", "modalDelete", "modalAbout"].forEach((m) => $(m).classList.remove("open"));
     $("apPop").classList.remove("open"); $("wdPop").classList.remove("open");
     closeCtxMenu();
   }

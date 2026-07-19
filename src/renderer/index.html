@@ -10,7 +10,6 @@
     <div class="rec-frame"></div>
     <header id="titlebar">
       <div class="t-logo"><span class="t-name">prod tracker</span><span>.</span></div>
-      <div class="t-ver">v0.4.6</div>
       <div class="t-spacer"></div>
       <div class="ap-wrap wd-wrap">
         <button id="wdToggle" class="fbtn" title="Working day length (used for work-day totals)"><span class="ap-dot wd-dot"></span> <span id="wdLabel">WORKDAY 8H</span></button>
@@ -61,6 +60,13 @@
       </aside>
       <main id="content" class="panel"></main>
     </div>
+
+    <footer id="footerbar">
+      <span id="footerVer" class="ftr-item ftr-ver">v0.4.7</span>
+      <div class="ftr-spacer"></div>
+      <button id="btnGithub" class="ftr-item ftr-link" title="Open repository on GitHub">GitHub</button>
+      <button id="btnAbout" class="ftr-item ftr-link" title="About & license">About</button>
+    </footer>
   </div>
 
   <!-- Context menu (right-click on a prod) -->
@@ -114,6 +120,42 @@
       <div class="modal-actions">
         <button id="btnCancelDelete" class="btn btn-ghost">Cancel</button>
         <button id="btnConfirmDelete" class="btn btn-red">Delete permanently</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- About / license -->
+  <div id="modalAbout" class="overlay">
+    <div class="modal modal-wide">
+      <div class="modal-head">
+        <div class="modal-title">About prod tracker</div>
+        <div class="t-spacer"></div>
+        <button id="btnCloseAbout" class="mini-btn">×</button>
+      </div>
+      <div class="about-body">
+        <p class="about-p">prod tracker <span id="aboutVer">v0.4.7</span> &mdash; a minimalist
+        working-time tracker for post-production.</p>
+
+        <div class="about-sub">License</div>
+        <p class="about-p">Copyright &copy; 2026 Just Edit. Licensed under the
+        <b>GNU General Public License v3.0 or later</b>. This program is free
+        software: you can redistribute it and/or modify it under the terms of the
+        GPL as published by the Free Software Foundation. It comes with
+        <b>NO WARRANTY</b>; see the license for details.</p>
+        <p class="about-p">
+          <button id="btnLicenseGnu" class="about-link">Read the full license (gnu.org)</button>
+          &nbsp;&middot;&nbsp;
+          <button id="btnLicenseRepo" class="about-link">LICENSE file on GitHub</button>
+        </p>
+
+        <div class="about-sub">Third-party components</div>
+        <p class="about-p">Electron (MIT) &middot; Poppins font (SIL Open Font License 1.1)
+        &middot; electron-builder (MIT, build tooling only).</p>
+
+        <div class="about-sub">Source</div>
+        <p class="about-p">
+          <button id="btnAboutGithub" class="about-link">github.com/noar-justedit/prodtracker</button>
+        </p>
       </div>
     </div>
   </div>

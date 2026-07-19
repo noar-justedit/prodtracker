@@ -5,6 +5,7 @@
 const { contextBridge, ipcRenderer } = require("electron");
 
 contextBridge.exposeInMainWorld("api", {
+  platform: process.platform,
   load: () => ipcRenderer.invoke("load-data"),
   save: (data) => ipcRenderer.invoke("save-data", data),
   setIdleConfig: (cfg) => ipcRenderer.send("set-idle-config", cfg),
