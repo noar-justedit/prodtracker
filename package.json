@@ -1,7 +1,7 @@
 {
   "name": "prodtracker",
   "productName": "prodtracker",
-  "version": "0.4.7",
+  "version": "0.4.8",
   "description": "Working-time tracker for post-production. Per-project START/STOP timer, work-day totals, auto-pause on inactivity.",
   "main": "src/main/main.js",
   "author": "Just Edit",
@@ -23,7 +23,7 @@
     "build:all": "electron-builder --config electron-builder.yml --mac --arm64 && electron-builder --config electron-builder.yml --win --x64"
   },
   "devDependencies": {
-    "electron": "^28.0.0",
-    "electron-builder": "^24.9.1"
+    "electron": "^42.0.0",
+    "electron-builder": "^26.0.0"
   }
 }

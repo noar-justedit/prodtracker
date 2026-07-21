@@ -32,23 +32,26 @@ function semverGt(a, b) {
 }
 function fetchFollow(url, hops, cb) {
   if (hops > 3) return cb(null);
+  let done = false;
+  const once = (v) => { if (!done) { done = true; cb(v); } };
   try {
     const opts = { timeout: 4000, headers: { "User-Agent": "prodtracker" } };
     const req = https.get(url, opts, (res) => {
       if ([301, 302, 303, 307, 308].includes(res.statusCode) && res.headers.location) {
         res.resume();
         let next;
-        try { next = new URL(res.headers.location, url).toString(); } catch (e) { return cb(null); }
+        try { next = new URL(res.headers.location, url).toString(); } catch (e) { return once(null); }
+        done = true;
         return fetchFollow(next, hops + 1, cb);
       }
-      if (res.statusCode !== 200) { res.resume(); return cb(null); }
+      if (res.statusCode !== 200) { res.resume(); return once(null); }
       let body = "";
       res.on("data", (c) => (body += c));
-      res.on("end", () => cb(body));
+      res.on("end", () => once(body));
     });
     req.on("timeout", () => req.destroy());
-    req.on("error", () => cb(null));
-  } catch (e) { cb(null); }
+    req.on("error", () => once(null));
+  } catch (e) { once(null); }
 }
 function checkForUpdate() {
   if (!UPDATE_URL) return;
@@ -88,10 +91,15 @@ function loadData() {
   return { productions: [], settings: { autoPause: true, idleThreshold: 300 } };
 }
 function saveData(data) {
-  const tmp = DATA_FILE + ".tmp";
-  fs.writeFileSync(tmp, JSON.stringify(data, null, 2), "utf8");
-  fs.renameSync(tmp, DATA_FILE);
-  return true;
+  try {
+    const tmp = DATA_FILE + ".tmp";
+    fs.writeFileSync(tmp, JSON.stringify(data, null, 2), "utf8");
+    fs.renameSync(tmp, DATA_FILE);
+    return { ok: true };
+  } catch (e) {
+    console.error("saveData failed:", e.message);
+    return { ok: false, error: String(e.message || e) };
+  }
 }
 
 /* ---------------- Idle / power monitoring ---------------- */
@@ -140,11 +148,17 @@ function createWindow() {
   mainWin.webContents.once("did-finish-load", () => setTimeout(checkForUpdate, 1500));
 }
 
+// The app is typically left open for days or weeks; re-check daily so update
+// notices actually reach long-running instances, not only fresh launches.
+const UPDATE_RECHECK_MS = 24 * 60 * 60 * 1000;
+setInterval(checkForUpdate, UPDATE_RECHECK_MS);
+
 /* ---------------- IPC ---------------- */
 ipcMain.handle("load-data", () => loadData());
 ipcMain.handle("save-data", (_e, data) => saveData(data));
+ipcMain.handle("get-version", () => app.getVersion());
 ipcMain.on("set-idle-config", (_e, cfg) => {
-  idleCfg = { enabled: !!cfg.enabled, threshold: Math.max(30, cfg.threshold | 0 || 300) };
+  idleCfg = { enabled: !!cfg.enabled, threshold: Math.max(60, cfg.threshold | 0 || 300) };
   wasIdle = false;
 });
 ipcMain.handle("open-external", (_e, url) => {

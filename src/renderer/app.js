@@ -4,7 +4,8 @@
 
 "use strict";
 
-const APP_VERSION = "0.4.7";
+let appVersion = ""; // fetched from the main process (package.json) at boot
+
 const IDLE_DEFAULT = 300;
 const IDLE_OPTIONS = [60, 120, 300, 600, 900, 1800]; // 1/2/5/10/15/30 min
 const WORKDAY_DEFAULT = 28800; // 8h
@@ -14,15 +15,15 @@ let state = { productions: [], settings: { autoPause: true, idleThreshold: IDLE_
 let selectedId = null;
 let autoPausedId = null;
 let autoPausedAt = null;
-let saveTimer = null;
 
 const $ = (id) => document.getElementById(id);
 
 /* ---------------- Persistence ---------------- */
 async function boot() {
   if (window.api.platform === "win32") document.body.classList.add("platform-win");
-  $("footerVer").textContent = "v" + APP_VERSION;
-  $("aboutVer").textContent = "v" + APP_VERSION;
+  appVersion = await window.api.getVersion();
+  $("footerVer").textContent = "v" + appVersion;
+  $("aboutVer").textContent = "v" + appVersion;
 
   state = await window.api.load();
   if (!state || !Array.isArray(state.productions)) state = { productions: [] };
@@ -47,7 +48,11 @@ async function boot() {
   window.api.onSuspend(() => handleSuspend());
   window.api.onUpdateAvailable((d) => showUpdateNotice(d));
 }
-function saveNow() { clearTimeout(saveTimer); window.api.save(JSON.parse(JSON.stringify(state))); }
+function saveNow() {
+  window.api.save(JSON.parse(JSON.stringify(state)))
+    .then((r) => { if (!r || r.ok === false) console.error("Save failed:", r && r.error); })
+    .catch((e) => console.error("Save failed:", e));
+}
 function pushIdleConfig() {
   window.api.setIdleConfig({ enabled: !!state.settings.autoPause, threshold: state.settings.idleThreshold || IDLE_DEFAULT });
 }
@@ -177,6 +182,7 @@ function parseWorkday(str) {
     const [hp, mp] = s.split(":");
     const H = parseInt(hp || "0", 10), M = parseInt(mp || "0", 10);
     if (isNaN(H)) return null;
+    if (!isNaN(M) && (M < 0 || M > 59)) return null;
     sec = H * 3600 + (isNaN(M) ? 0 : M) * 60;
   } else {
     const f = parseFloat(s);
@@ -484,7 +490,7 @@ function showUpdateNotice({ version, url }) {
   ov.innerHTML =
     `<div class="mi-card">` +
     `<div class="mi-h">New version available</div>` +
-    `<div class="mi-sub">prod tracker v${escapeHtml(version)} is available. You're on v${escapeHtml(APP_VERSION)}.</div>` +
+    `<div class="mi-sub">prod tracker v${escapeHtml(version)} is available. You're on v${escapeHtml(appVersion)}.</div>` +
     `<div class="pw-actions"><button class="pw-back" id="upd-later">Later</button><button class="pw-use" id="upd-go">Get it</button></div>` +
     `</div>`;
   document.body.appendChild(ov);
