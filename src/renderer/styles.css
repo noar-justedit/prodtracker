@@ -347,3 +347,8 @@ body.platform-win #titlebar { padding-right: 150px; }
   text-underline-offset: 2px;
 }
 .about-link:hover { color: var(--text); }
+
+/* ── App icon in titlebar / About ── */
+.t-icon { width: 22px; height: 22px; margin-right: 9px; align-self: center; -webkit-user-drag: none; }
+.about-id { display: flex; align-items: center; gap: 10px; }
+.about-icon { width: 28px; height: 28px; flex-shrink: 0; -webkit-user-drag: none; }

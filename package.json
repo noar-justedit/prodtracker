@@ -1,7 +1,7 @@
 {
   "name": "prodtracker",
   "productName": "prodtracker",
-  "version": "0.4.8",
+  "version": "0.4.9",
   "description": "Working-time tracker for post-production. Per-project START/STOP timer, work-day totals, auto-pause on inactivity.",
   "main": "src/main/main.js",
   "author": "Just Edit",
