@@ -156,6 +156,11 @@ setInterval(checkForUpdate, UPDATE_RECHECK_MS);
 /* ---------------- IPC ---------------- */
 ipcMain.handle("load-data", () => loadData());
 ipcMain.handle("save-data", (_e, data) => saveData(data));
+// Synchronous save, used only from the renderer's "beforeunload" handler: when the
+// window is closing there is no time left for an async round-trip, and this is what
+// guarantees a running timer is closed at the real quit time instead of being left
+// open (which used to keep counting until the next STOP after relaunch).
+ipcMain.on("save-data-sync", (e, data) => { e.returnValue = saveData(data); });
 ipcMain.handle("get-version", () => app.getVersion());
 ipcMain.on("set-idle-config", (_e, cfg) => {
   idleCfg = { enabled: !!cfg.enabled, threshold: Math.max(60, cfg.threshold | 0 || 300) };

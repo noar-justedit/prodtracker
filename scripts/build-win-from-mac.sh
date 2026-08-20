@@ -30,15 +30,20 @@ echo -e "${GREEN}✓ ok${NC}"
 
 echo -e "${BLUE}[5/5]${NC} Build Windows (x64)…"
 echo -e "${YELLOW}  electron-builder telecharge le binaire Electron Windows (~100 Mo) au 1er run.${NC}\n"
-npm run build:win 2>&1 | grep -v "^>" | tail -20 || {
+# Pas de pipe ici : "npm run build:win | tail" renvoyait le code de sortie de tail,
+# donc un build echoue s'affichait quand meme comme un succes.
+npm run build:win || {
   echo -e "\n${RED}✗ Build echoue.${NC} En cas de souci reseau, reessayer avec :"
   echo -e "  ${CYAN}ELECTRON_MIRROR=https://npmmirror.com/mirrors/electron/ npm run build:win${NC}"
   exit 1
 }
 
-EXE=$(find dist -name "*.exe" 2>/dev/null | head -1)
+EXE=$(ls -t dist/*.exe 2>/dev/null | head -1)
+if [ -z "$EXE" ]; then
+  echo -e "\n${RED}✗ Aucun .exe produit dans dist/.${NC}"; exit 1
+fi
 echo -e "\n${BOLD}${GREEN}  Build termine.${NC}"
-[ -n "$EXE" ] && echo -e "  ${GREEN}→${NC} $EXE  ($(du -sh "$EXE" | cut -f1))"
+echo -e "  ${GREEN}→${NC} $EXE  ($(du -sh "$EXE" | cut -f1))"
 echo ""
 echo -e "${CYAN}Sur Windows :${NC} le .exe n'est pas signe."
 echo -e "  Au 1er lancement, SmartScreen affiche \"Editeur inconnu\" :"

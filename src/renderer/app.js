@@ -10,6 +10,10 @@ const IDLE_DEFAULT = 300;
 const IDLE_OPTIONS = [60, 120, 300, 600, 900, 1800]; // 1/2/5/10/15/30 min
 const WORKDAY_DEFAULT = 28800; // 8h
 const WORKDAY_MIN = 3600, WORKDAY_MAX = 86400;
+// While a timer runs we stamp state.lastSeen on disk at this interval. If the app
+// dies without a clean shutdown (crash, power loss, force quit), the next launch
+// closes the orphan session at that stamp instead of counting the offline hours.
+const HEARTBEAT_MS = 15000;
 
 let state = { productions: [], settings: { autoPause: true, idleThreshold: IDLE_DEFAULT } };
 let selectedId = null;
@@ -32,6 +36,9 @@ async function boot() {
   if (!IDLE_OPTIONS.includes(state.settings.idleThreshold)) state.settings.idleThreshold = IDLE_DEFAULT;
   if (!(state.settings.workDaySeconds >= WORKDAY_MIN && state.settings.workDaySeconds <= WORKDAY_MAX)) state.settings.workDaySeconds = WORKDAY_DEFAULT;
 
+  for (const p of state.productions) if (!Array.isArray(p.sessions)) p.sessions = [];
+  const recovered = recoverOrphanSessions();
+
   const active = state.productions.find((p) => p.status === "active");
   selectedId = active ? active.id : (state.productions[0] ? state.productions[0].id : null);
 
@@ -42,11 +49,14 @@ async function boot() {
   renderMain();
   tick();
   setInterval(tick, 1000);
+  setInterval(heartbeat, HEARTBEAT_MS);
 
   window.api.onIdle((d) => handleIdle(d.idleSeconds));
   window.api.onResumed(() => handleResumed());
   window.api.onSuspend(() => handleSuspend());
   window.api.onUpdateAvailable((d) => showUpdateNotice(d));
+
+  if (recovered.length) showRecoveryNotice(recovered);
 }
 function saveNow() {
   window.api.save(JSON.parse(JSON.stringify(state)))
@@ -56,6 +66,53 @@ function saveNow() {
 function pushIdleConfig() {
   window.api.setIdleConfig({ enabled: !!state.settings.autoPause, threshold: state.settings.idleThreshold || IDLE_DEFAULT });
 }
+
+/* ---------------- Quitting while a timer runs ---------------- */
+// Closing the app stops the clock. Two nets: a clean flush on window close
+// (exact), and a heartbeat on disk for the cases where no flush can happen
+// (crash, force quit, power loss) - there the session is closed at the last
+// heartbeat, so at most HEARTBEAT_MS of real work is lost instead of hours of
+// offline time being counted as work.
+function heartbeat() {
+  if (!state.productions.some((p) => p.running)) return;
+  state.lastSeen = Date.now();
+  saveNow();
+}
+function flushRunning(now) {
+  let changed = false;
+  for (const p of state.productions) {
+    if (!p.running) continue;
+    if (now > p.running) p.sessions.push({ s: p.running, e: now });
+    p.running = null;
+    changed = true;
+  }
+  return changed;
+}
+function recoverOrphanSessions() {
+  const now = Date.now();
+  const seen = typeof state.lastSeen === "number" ? state.lastSeen : 0;
+  const recovered = [];
+  for (const p of state.productions) {
+    if (!p.running) continue;
+    // Clamp: never before the session start, never in the future.
+    let end = Math.min(Math.max(seen, p.running), now);
+    const sec = (end - p.running) / 1000;
+    if (sec >= 1) p.sessions.push({ s: p.running, e: end });
+    p.running = null;
+    recovered.push({ name: p.name, end, sec });
+  }
+  if (recovered.length) { state.lastSeen = now; saveNow(); }
+  return recovered;
+}
+window.addEventListener("beforeunload", () => {
+  const now = Date.now();
+  const changed = flushRunning(now);
+  state.lastSeen = now;
+  if (changed) {
+    try { window.api.saveSync(JSON.parse(JSON.stringify(state))); }
+    catch (e) { console.error("Flush on quit failed:", e); }
+  }
+});
 
 /* ---------------- Time helpers ---------------- */
 function startOfDay(d) { const x = new Date(d); x.setHours(0, 0, 0, 0); return x.getTime(); }
@@ -241,7 +298,8 @@ $("btnAboutGithub").addEventListener("click", () => window.api.openExternal(REPO
 /* ---------------- Context menu ---------------- */
 function openCtxMenu(p, x, y) {
   const m = $("ctxMenu");
-  let html = "";
+  let html = `<div class="ctx-item" data-act="edit">Rename / edit</div>`;
+  html += `<div class="ctx-sep"></div>`;
   if (p.status === "active") {
     html += `<div class="ctx-item" data-act="terminate">Finish</div>`;
     html += `<div class="ctx-sep"></div>`;
@@ -254,7 +312,8 @@ function openCtxMenu(p, x, y) {
   m.querySelectorAll(".ctx-item").forEach((it) => {
     it.addEventListener("click", () => {
       closeCtxMenu();
-      if (it.dataset.act === "terminate") openDone(p);
+      if (it.dataset.act === "edit") openEdit(p);
+      else if (it.dataset.act === "terminate") openDone(p);
       else if (it.dataset.act === "delete") openDelete(p);
     });
   });
@@ -332,6 +391,7 @@ function renderMain() {
       </div>
       <div class="t-spacer"></div>
       <div class="header-btns">
+        <button class="btn btn-ghost" id="btnEdit">Edit</button>
         <button class="btn btn-pro" id="btnStats">Detailed stats</button>
         ${done ? "" : '<button class="btn" id="btnTerminate">Finish</button>'}
         <button class="btn btn-del" id="btnDelete">Delete</button>
@@ -357,6 +417,7 @@ function renderMain() {
       <div class="tile"><div class="tile-label">This week</div><div class="tile-value" data-tile="week">\u2014</div></div>
       <div class="tile"><div class="tile-label">This month</div><div class="tile-value" data-tile="month">\u2014</div></div>
     </div>`;
+  $("btnEdit").addEventListener("click", () => openEdit(p));
   $("btnStats").addEventListener("click", () => openStats(p, false));
   $("btnDelete").addEventListener("click", () => openDelete(p));
   if (!done) {
@@ -415,6 +476,29 @@ $("btnCreate").addEventListener("click", () => { const name = $("inNewName").val
 $("inNewName").addEventListener("keydown", (e) => { if (e.key === "Enter") $("inNewClient").focus(); });
 $("inNewClient").addEventListener("keydown", (e) => { if (e.key === "Enter") $("btnCreate").click(); });
 
+let editTarget = null;
+function openEdit(p) {
+  editTarget = p;
+  $("inEditName").value = p.name || "";
+  $("inEditClient").value = p.client || "";
+  $("modalEdit").classList.add("open");
+  setTimeout(() => { $("inEditName").focus(); $("inEditName").select(); }, 30);
+}
+function applyEdit() {
+  if (!editTarget) return;
+  const name = $("inEditName").value.trim();
+  if (!name) { $("inEditName").focus(); return; }
+  editTarget.name = name;
+  editTarget.client = $("inEditClient").value.trim();
+  $("modalEdit").classList.remove("open");
+  editTarget = null;
+  saveNow(); renderSidebar(); renderMain(); tick();
+}
+$("btnCancelEdit").addEventListener("click", () => { $("modalEdit").classList.remove("open"); editTarget = null; });
+$("btnSaveEdit").addEventListener("click", applyEdit);
+$("inEditName").addEventListener("keydown", (e) => { if (e.key === "Enter") $("inEditClient").focus(); });
+$("inEditClient").addEventListener("keydown", (e) => { if (e.key === "Enter") applyEdit(); });
+
 let doneTarget = null;
 function openDone(p) { doneTarget = p; $("doneMsg").textContent = `\u201c${p.name}\u201d will move to your finished productions. The timer stops and you'll get the recap. Stats stay available.`; $("modalDone").classList.add("open"); }
 $("btnCancelDone").addEventListener("click", () => $("modalDone").classList.remove("open"));
@@ -469,17 +553,38 @@ function cell(k, v) { return `<div class="stats-cell"><div class="k">${k}</div><
 function dayLabel(date, i) { if (i === 0) return "Today"; if (i === 1) return "Yesterday"; const n = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"]; return `${n[date.getDay()]} ${pad(date.getDate())}/${pad(date.getMonth() + 1)}`; }
 $("btnCloseStats").addEventListener("click", () => $("modalStats").classList.remove("open"));
 
-for (const ov of ["modalNew", "modalStats", "modalDone", "modalDelete", "modalAbout"]) {
+for (const ov of ["modalNew", "modalEdit", "modalStats", "modalDone", "modalDelete", "modalAbout"]) {
   $(ov).addEventListener("click", (e) => { if (e.target.id === ov) $(ov).classList.remove("open"); });
 }
 document.addEventListener("keydown", (e) => {
   if (e.key === "Escape") {
-    ["modalNew", "modalStats", "modalDone", "modalDelete", "modalAbout"].forEach((m) => $(m).classList.remove("open"));
+    ["modalNew", "modalEdit", "modalStats", "modalDone", "modalDelete", "modalAbout"].forEach((m) => $(m).classList.remove("open"));
     $("apPop").classList.remove("open"); $("wdPop").classList.remove("open");
     closeCtxMenu();
   }
 });
 document.addEventListener("click", () => { $("apPop").classList.remove("open"); $("wdPop").classList.remove("open"); });
+
+/* ---------------- Recovery notice ---------------- */
+function clockLabel(ts) { const d = new Date(ts); return `${pad(d.getDate())}/${pad(d.getMonth() + 1)} ${pad(d.getHours())}:${pad(d.getMinutes())}`; }
+function showRecoveryNotice(list) {
+  const ov = document.createElement("div");
+  ov.className = "notice-ov";
+  const items = list.map((r) =>
+    `<li><b>${escapeHtml(r.name)}</b> &mdash; stopped at ${clockLabel(r.end)}, ${compact(r.sec)} counted</li>`
+  ).join("");
+  ov.innerHTML =
+    `<div class="mi-card">` +
+    `<div class="mi-h">Timer closed on last exit</div>` +
+    `<div class="mi-sub">The app was closed while a timer was running. The session was closed at the last moment prod tracker was alive, so no offline time was counted.</div>` +
+    `<ul class="mi-list">${items}</ul>` +
+    `<div class="pw-actions"><button class="pw-use" id="rec-ok">OK</button></div>` +
+    `</div>`;
+  document.body.appendChild(ov);
+  const close = () => ov.remove();
+  ov.querySelector("#rec-ok").onclick = close;
+  ov.onclick = (e) => { if (e.target === ov) close(); };
+}
 
 /* ---------------- Update notice (INGESTO idiom) ---------------- */
 function showUpdateNotice({ version, url }) {

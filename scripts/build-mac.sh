@@ -17,12 +17,16 @@ npm install --silent 2>&1 | grep -v "^npm warn" || true
 echo -e "${GREEN}✓ ok${NC}"
 
 echo -e "${BLUE}[3/3]${NC} Build (arm64)…"
-npm run build
+npm run build || { echo -e "\n${RED}✗ Build echoue (voir l'erreur ci-dessus).${NC}"; exit 1; }
 
-DMG=$(find dist -name "*.dmg" 2>/dev/null | head -1)
+# ls -t : le plus recent d'abord, pour ne pas annoncer un vieux .dmg reste dans dist/
+DMG=$(ls -t dist/*.dmg 2>/dev/null | head -1)
+if [ -z "$DMG" ]; then
+  echo -e "\n${RED}✗ Aucun .dmg produit dans dist/.${NC}"; exit 1
+fi
 echo ""
 echo -e "${BOLD}${GREEN}  Build termine.${NC}"
-[ -n "$DMG" ] && echo -e "  ${GREEN}→${NC} $DMG  ($(du -sh "$DMG" | cut -f1))"
+echo -e "  ${GREEN}→${NC} $DMG  ($(du -sh "$DMG" | cut -f1))"
 echo ""
 echo -e "${YELLOW}Note :${NC} l'app n'est pas signee. Au 1er lancement macOS :"
 echo -e "  clic droit sur l'app → Ouvrir → Ouvrir."

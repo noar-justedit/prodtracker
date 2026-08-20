@@ -9,6 +9,7 @@ contextBridge.exposeInMainWorld("api", {
   getVersion: () => ipcRenderer.invoke("get-version"),
   load: () => ipcRenderer.invoke("load-data"),
   save: (data) => ipcRenderer.invoke("save-data", data),
+  saveSync: (data) => ipcRenderer.sendSync("save-data-sync", data),
   setIdleConfig: (cfg) => ipcRenderer.send("set-idle-config", cfg),
   openExternal: (url) => ipcRenderer.invoke("open-external", url),
   onIdle: (cb) => ipcRenderer.on("activity-idle", (_e, p) => cb(p)),

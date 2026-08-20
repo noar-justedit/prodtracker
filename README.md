@@ -1,4 +1,4 @@
-# prodtracker v0.4.9
+# prodtracker v0.5.0
 
 A minimalist working-time tracker for post-production. Per-project START/STOP
 timer, totals that roll up into **work-days** (not 24h), and auto-pause on
@@ -18,8 +18,11 @@ Interface language is English; the on-screen wordmark reads "prod tracker".
   (1/2/5/10/15/30 min) or on sleep/lock, and resumes on activity.
 - Recording state is unmistakable: red frame + breathing STOP button while
   running, violet frame + IDLE readout while auto-paused.
-- Per-project stats (total / today / week / month, 14-day breakdown), finish and
-  delete productions.
+- Per-project stats (total / today / week / month, 14-day breakdown), rename/edit,
+  finish and delete productions.
+- Quitting the app stops the clock: the running session is closed at the moment you
+  quit, and a heartbeat on disk covers crashes and power loss (worst case, 15 s
+  lost instead of hours of offline time counted).
 
 ## Requirements
 
@@ -37,6 +40,22 @@ npm start
 ```
 ./scripts/build-mac.sh            # macOS  -> dist/*.dmg (Apple Silicon / arm64)
 ./scripts/build-win-from-mac.sh   # Windows -> dist/*.exe (NSIS x64)
+```
+
+`permission denied`? The shell scripts lose their executable bit when the repo is
+downloaded as a ZIP or uploaded through the GitHub web interface. `npm install`
+restores it (postinstall), or fix it by hand:
+
+```
+chmod +x scripts/*.sh
+```
+
+Either way, the scripts are only wrappers - these always work, exec bit or not:
+
+```
+bash scripts/build-mac.sh     # or
+npm run build                 # macOS .dmg
+npm run build:win             # Windows .exe
 ```
 
 Icons can be regenerated with `./scripts/make-icon.sh` from `build-resources/icon.png`.
@@ -89,8 +108,11 @@ A single JSON file, kept between launches:
 ## Notes
 
 - One timer runs at a time; starting a production stops any other running one.
-- Idle detection only runs while the app is open. If you close it mid-session,
-  time keeps counting until the next STOP on reopen.
+- Idle detection only runs while the app is open. Closing the app closes the running
+  session instead of leaving it open: on the next launch a notice recaps what was
+  counted, and the timer starts stopped.
+- The recovery stamp (`lastSeen`) is written to the data file every 15 s while a
+  timer runs. After a crash or a power loss, up to 15 s of real work can be lost.
 - Builds target macOS arm64 (Apple Silicon). Adjust `electron-builder.yml` for
   Intel/universal if needed.
 - The wordmark uses [Poppins](https://fonts.google.com/specimen/Poppins)
