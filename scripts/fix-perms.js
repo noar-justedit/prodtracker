@@ -8,14 +8,20 @@ const path = require("path");
 
 if (process.platform === "win32") process.exit(0);
 
-const dir = path.join(__dirname);
-try {
-  for (const f of fs.readdirSync(dir)) {
-    if (!f.endsWith(".sh")) continue;
-    const p = path.join(dir, f);
-    const mode = fs.statSync(p).mode & 0o777;
-    if (mode !== 0o755) fs.chmodSync(p, 0o755);
+// scripts/*.sh, plus the double-clickable *.command wrappers at the project root.
+const targets = [
+  { dir: __dirname, ext: ".sh" },
+  { dir: path.join(__dirname, ".."), ext: ".command" }
+];
+for (const { dir, ext } of targets) {
+  try {
+    for (const f of fs.readdirSync(dir)) {
+      if (!f.endsWith(ext)) continue;
+      const p = path.join(dir, f);
+      const mode = fs.statSync(p).mode & 0o777;
+      if (mode !== 0o755) fs.chmodSync(p, 0o755);
+    }
+  } catch (e) {
+    // Never break the install over this.
   }
-} catch (e) {
-  // Never break the install over this.
 }

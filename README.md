@@ -1,4 +1,4 @@
-# prodtracker v0.5.0
+# prodtracker v0.5.1
 
 A minimalist working-time tracker for post-production. Per-project START/STOP
 timer, totals that roll up into **work-days** (not 24h), and auto-pause on
@@ -37,9 +37,18 @@ npm start
 
 ## Build (from a Mac)
 
+Double-click from the Finder:
+
 ```
-./scripts/build-mac.sh            # macOS  -> dist/*.dmg (Apple Silicon / arm64)
-./scripts/build-win-from-mac.sh   # Windows -> dist/*.exe (NSIS x64)
+build-mac.command    # macOS   -> dist/*.dmg (Apple Silicon / arm64), signed + notarized
+build-win.command    # Windows -> dist/*.exe (NSIS x64)
+```
+
+Or from a terminal:
+
+```
+./scripts/build-mac.sh            # same, plus --no-sign and --check
+./scripts/build-win-from-mac.sh
 ```
 
 `permission denied`? The shell scripts lose their executable bit when the repo is
@@ -60,9 +69,42 @@ npm run build:win             # Windows .exe
 
 Icons can be regenerated with `./scripts/make-icon.sh` from `build-resources/icon.png`.
 
-The macOS `.dmg` and Windows `.exe` are unsigned: users will see a Gatekeeper /
-SmartScreen warning on first launch (bypassable). Code signing requires paid
-certificates.
+### Signing and notarization (macOS)
+
+`./scripts/build-mac.sh` does the whole thing — build, sign, notarize, staple,
+verify — in one command. The only prerequisite is the **Developer ID Application**
+certificate in the login keychain (developer.apple.com → Certificates, download
+the `.cer`, double-click it).
+
+On the first run the script asks for the Apple ID, Team ID (pre-filled from the
+certificate) and an app-specific password, and stores them in the keychain as a
+notarytool profile named `prodtracker-notarization`. It never asks again. Override
+the profile name with `APPLE_KEYCHAIN_PROFILE`.
+
+What it automates: exporting the credential variable that makes electron-builder
+run [@electron/notarize](https://github.com/electron/notarize) on the `.app`, then
+signing, submitting and stapling the `.dmg` itself. electron-builder leaves the
+disk image unsigned (`dmg.sign` defaults to `false`) and never sends it to Apple,
+so without those three steps the app is clean but macOS still warns when the
+downloaded image is opened. The script signs the `.dmg` with `--timestamp` —
+Apple refuses to notarize a signature without a secure timestamp, which is exactly
+why turning `dmg.sign` on in `electron-builder.yml` is the wrong fix. On a
+rejection it prints Apple's report instead of a submission ID to chase. Budget a
+few minutes: Apple's turnaround is the slow part.
+
+It ends on a verification pass, and refuses to call the build good if any of it
+fails — `codesign --verify` and `stapler validate` on both the `.dmg` and the
+`.app`, plus `spctl -a -t open --context context:primary-signature` on the `.dmg`,
+which is the check Gatekeeper itself runs on a downloaded disk image. Run it on its
+own against the last build with `./scripts/build-mac.sh --check`.
+
+With no certificate, or with `./scripts/build-mac.sh --no-sign`, the build still
+produces an unsigned `.dmg` (Gatekeeper warning on first launch, bypassable with
+right-click → Open).
+
+The Windows `.exe` stays unsigned — SmartScreen shows "unknown publisher" on first
+run, bypassable via More info → Run anyway. An EV/OV code-signing certificate is a
+separate purchase; the Apple Developer account does nothing for Windows.
 
 Both installers embed the GPL: the Windows NSIS installer shows a license page,
 and the macOS `.dmg` carries the license as an agreement shown when it is opened
@@ -88,8 +130,8 @@ file announces something newer, it shows a notice linking to `url` (the repo's
 Releases page). It never blocks startup and fails silently with no network.
 
 **To publish an update:** bump the version in `version.json` on the `main` branch
-to match your new release, and publish a matching GitHub Release (tag `v0.5.0`,
-`v0.5.0`, etc., with the built `.dmg`/`.exe` attached). Installs on the previous
+to match your new release, and publish a matching GitHub Release (tag `v0.5.1`,
+`v0.6.0`, etc., with the built `.dmg`/`.exe` attached). Installs on the previous
 version will pick up the notice on their next launch. Keep `version.json` in sync
 with what you've actually released - bumping it ahead of a real release will
 notify users of an update that isn't there yet.

@@ -18,6 +18,17 @@ files:
 mac:
   category: public.app-category.productivity
   icon: build-resources/icon.png
+  # Signing + notarization. The Developer ID Application certificate is picked up
+  # from the login keychain automatically (override with CSC_NAME if several match).
+  # Notarization is triggered by electron-builder as soon as credentials are found
+  # in the environment - scripts/build-mac.sh exports APPLE_KEYCHAIN_PROFILE.
+  # With no certificate and no credentials, the build still runs and produces an
+  # unsigned .dmg.
+  hardenedRuntime: true
+  gatekeeperAssess: false
+  entitlements: build-resources/entitlements.mac.plist
+  entitlementsInherit: build-resources/entitlements.mac.plist
+  notarize: true
   target:
     - target: dmg
       arch:
@@ -26,6 +37,10 @@ mac:
 dmg:
   title: "prodtracker"
   writeUpdateInfo: false
+  # Ne pas mettre "sign: true" ici. electron-builder signerait bien le .dmg, mais
+  # sans --timestamp, et Apple refuse de notariser une signature sans horodatage
+  # securise. scripts/build-mac.sh signe l'image disque lui-meme, avec timestamp,
+  # juste avant de l'envoyer a la notarisation.
   icon: null
   # electron-builder auto-detects build-resources/license_en.txt (and license_<lang>.txt
   # variants) as the DMG license agreement by filename convention. There is no "license"
